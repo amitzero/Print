@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Print</string>
+    <string name="refresh">Refresh</string>
+    <string name="todo">TODO</string>
+    <string name="connected">Connected</string>
+    <string name="sample_bt_address">3424:23423:2354234:23434</string>
+    <string name="disconnect">disconnect</string>
+    <string name="print_sample">print sample</string>
+    <string name="sample_bt_name">POS Printer</string>
 </resources>

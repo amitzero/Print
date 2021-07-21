@@ -2,21 +2,26 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="8dp"
+    android:padding="20dp"
+    android:background="@color/black"
     android:orientation="vertical">
 
     <TextView
         android:id="@+id/deviceName"
+        android:textColor="@color/white"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="18sp"
-        android:text="Name example"/>
+        android:gravity="center"
+        android:text="@string/sample_bt_name"/>
 
     <TextView
         android:id="@+id/deviceAddress"
+        android:textColor="@color/white"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="14sp"
-        android:text="21s:1213:1332:242"/>
+        android:gravity="center"
+        android:text="@string/sample_bt_address"/>
 
 </LinearLayout>
