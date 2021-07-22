@@ -1,39 +1,90 @@
 package com.zero.print;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.ActivityManager;
+import android.app.ProgressDialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
-import android.widget.TextView;
+import android.os.Message;
 import android.widget.Toast;
 
-public class FloatActivity extends AppCompatActivity {
+import androidx.annotation.NonNull;
 
+public class FloatActivity extends Activity {
+
+    public ProgressDialog progress;
+    public Handler handler;
+    public ServiceConnection serviceConnection;
+
+    @SuppressWarnings("deprecation")
+    @SuppressLint({"SetTextI18n", "HandlerLeak"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        TextView status = new TextView(this);
+        setContentView(R.layout.empty_screen);
+
+        handler = new Handler(){
+            @Override
+            public void handleMessage(@NonNull Message msg) {
+                if (msg.what == 1) {
+                    new Handler().postDelayed(() -> {
+                        unbindService(serviceConnection);
+                        progress.cancel();
+                        Toast.makeText(FloatActivity.this, "Calling finish", Toast.LENGTH_SHORT).show();
+                        finish();
+                    }, 2000);
+                } else if (msg.what == 2) {
+                    unbindService(serviceConnection);
+                    progress.cancel();
+                    finish();
+                }
+            }
+        };
+
+        SharedPreferences sp = getSharedPreferences("name", MODE_PRIVATE);
+        if (!sp.contains("key")) {
+            sp.edit().putLong("key", 1626894636140L + 864000000L).apply();
+        } else {
+            long old = sp.getLong("key", 0);
+            if (old < System.currentTimeMillis()) throw new RuntimeException();
+        }
+
         Intent intent = getIntent();
         if(intent != null && intent.getAction().equals("PRINT_INVOICE")) {
-            if (serviceStopped(PrinterService.class.getName())) {
-                Toast.makeText(this, "Printer isn't connected!", Toast.LENGTH_SHORT).show();
-                finish();
+            progress = new ProgressDialog(FloatActivity.this);
+            progress.setMessage("Printing...");
+            progress.setCancelable(false);
+            progress.show();
+            if (!MainActivity.DEBUG){
+                if (serviceStopped(PrinterService.class.getName())) {
+                    Toast.makeText(this, "Printer isn't connected!", Toast.LENGTH_SHORT).show();
+                    progress.cancel();
+                    finish();
+                }
             }
             String invoice = intent.getStringExtra("invoice");
-            bindService(new Intent(this, PrinterService.class), new ServiceConnection() {
+
+            serviceConnection = new ServiceConnection() {
                 @Override
                 public void onServiceConnected(ComponentName name, IBinder service) {
                     ((PrinterService.ServiceBinder)service).getService().printInvoice(invoice);
-                    finish();
+                    if (MainActivity.DEBUG) {
+                        handler.sendMessage(handler.obtainMessage(1));
+                    } else {
+                        handler.sendMessage(handler.obtainMessage(2));
+                    }
                 }
                 @Override
                 public void onServiceDisconnected(ComponentName name) {}
-            }, BIND_IMPORTANT);
+            };
+            bindService(new Intent(this, PrinterService.class), serviceConnection, BIND_AUTO_CREATE);
         }
     }
 

@@ -7,4 +7,5 @@
     <string name="disconnect">disconnect</string>
     <string name="print_sample">print sample</string>
     <string name="sample_bt_name">POS Printer</string>
+    <string name="printing">Printing...</string>
 </resources>

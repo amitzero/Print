@@ -6,16 +6,12 @@ import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
 import android.widget.Button;
@@ -29,7 +25,7 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 
 public class MainActivity extends AppCompatActivity {
 
-    static public boolean DEBUG = true;
+    static public boolean DEBUG = false;
 
     private ProgressDialog progress;
     private ListView listView;
@@ -42,7 +38,6 @@ public class MainActivity extends AppCompatActivity {
     private PrinterService service;
     private Intent serviceIntent;
     private ServiceConnection serviceConnection;
-    PrinterService.Status status;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,6 +80,13 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == 1 && resultCode == RESULT_OK) {
             initializeBluetooth();
         }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unbindService(serviceConnection);
+        finish();
     }
 
     @Override

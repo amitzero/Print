@@ -22,32 +22,6 @@ public class PrinterService extends Service {
     public String defaultPrinter;
 
     public Status status;
-//    = new Handler() {
-//        @Override
-//        public void handleMessage(@NonNull Message msg) {
-//            if (msg.what == PRINT) {
-//                String invoice = (String)msg.obj;
-//                ByteArrayOutputStream invoice_byte;
-//                try {
-//                    invoice_byte = parseStringInvoice(invoice);
-//                    if (bluetoothDriver == null) {
-//                        printMsg("Driver is null!");
-//                    }
-//                    else if (!bluetoothDriver.connection.isConnected()) {
-//                        printMsg("Printer isn't connected!");
-//                    } else {
-//                        bluetoothDriver.data.send(invoice_byte.toByteArray());
-//                    }
-//                    if (!MainActivity.REAL_DEVICE) {
-//                        printMsg("Print length: "+invoice_byte.size());
-//                    }
-//                } catch (IOException e) {
-//                    printMsg("Exception on invoice parsing!");
-//                }
-//            }
-//            super.handleMessage(msg);
-//        }
-//    };
 
     @Override
     public IBinder onBind(Intent intent) {
