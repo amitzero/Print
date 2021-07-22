@@ -25,7 +25,7 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 
 public class MainActivity extends AppCompatActivity {
 
-    static public boolean DEBUG = false;
+    public static final boolean DEBUG = false;
 
     private ProgressDialog progress;
     private ListView listView;

@@ -8,7 +8,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -37,7 +36,6 @@ public class FloatActivity extends Activity {
                     new Handler().postDelayed(() -> {
                         unbindService(serviceConnection);
                         progress.cancel();
-                        Toast.makeText(FloatActivity.this, "Calling finish", Toast.LENGTH_SHORT).show();
                         finish();
                     }, 2000);
                 } else if (msg.what == 2) {
@@ -48,14 +46,6 @@ public class FloatActivity extends Activity {
             }
         };
 
-        SharedPreferences sp = getSharedPreferences("name", MODE_PRIVATE);
-        if (!sp.contains("key")) {
-            sp.edit().putLong("key", 1626894636140L + 864000000L).apply();
-        } else {
-            long old = sp.getLong("key", 0);
-            if (old < System.currentTimeMillis()) throw new RuntimeException();
-        }
-
         Intent intent = getIntent();
         if(intent != null && intent.getAction().equals("PRINT_INVOICE")) {
             progress = new ProgressDialog(FloatActivity.this);
@@ -64,7 +54,7 @@ public class FloatActivity extends Activity {
             progress.show();
             if (!MainActivity.DEBUG){
                 if (serviceStopped(PrinterService.class.getName())) {
-                    Toast.makeText(this, "Printer isn't connected!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Connect printer first!", Toast.LENGTH_SHORT).show();
                     progress.cancel();
                     finish();
                 }

@@ -111,12 +111,12 @@ public class PrinterService extends Service {
                     bluetoothDriver.data.send(invoice_byte.toByteArray());
                     return true;
                 } else {
-                    printMsg("Printer isn't connected!");
+                    Toast.makeText(getApplicationContext(), "Printer isn't connected!", Toast.LENGTH_SHORT).show();
                     return false;
                 }
             }
         } catch (IOException e) {
-            printMsg("Exception on invoice parsing!");
+            Toast.makeText(getApplicationContext(), "Exception on invoice parsing!", Toast.LENGTH_SHORT).show();
             return false;
         }
     }
@@ -139,7 +139,9 @@ public class PrinterService extends Service {
     }
 
     private void printMsg(String msg) {
-        Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+        if (MainActivity.DEBUG) {
+            Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+        }
     }
     private ByteArrayOutputStream parseStringInvoice(String invoice) throws IOException {
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
@@ -178,7 +180,7 @@ public class PrinterService extends Service {
                         byteStream.write(Printer.PAPER_FEED);
                         break;
                     default:
-                        Toast.makeText(this, "Unknown command!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Unknown command found!", Toast.LENGTH_SHORT).show();
                 }
             } else if(inCommand) {
                 command.append(ch);
