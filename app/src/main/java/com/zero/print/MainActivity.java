@@ -27,6 +27,8 @@ public class MainActivity extends AppCompatActivity {
 
     public static final boolean DEBUG = false;
 
+    private boolean activityForResult = false;
+
     private ProgressDialog progress;
     private ListView listView;
     private ImageView refresh_animation;
@@ -78,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 1 && resultCode == RESULT_OK) {
+            activityForResult = false;
             initializeBluetooth();
         }
     }
@@ -85,8 +88,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        unbindService(serviceConnection);
-        finish();
+        if (!activityForResult) {
+            unbindService(serviceConnection);
+            finish();
+        }
     }
 
     @Override
@@ -145,6 +150,7 @@ public class MainActivity extends AppCompatActivity {
         if(BluetoothAdapter.getDefaultAdapter() == null) {
             Toast.makeText(this, "This device doesn't support Bluetooth!", Toast.LENGTH_SHORT).show();
         } else if(!BluetoothAdapter.getDefaultAdapter().isEnabled()) {
+            activityForResult = true;
             startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE), 1);
         } else {
             initializeBluetooth();
