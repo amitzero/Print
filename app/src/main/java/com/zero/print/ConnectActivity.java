@@ -4,10 +4,12 @@ import android.animation.Animator;
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
@@ -23,16 +25,17 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
-public class MainActivity extends AppCompatActivity {
+public class ConnectActivity extends AppCompatActivity {
 
     public static final boolean DEBUG = false;
-
-    private boolean activityForResult = false;
+    final static String[] models = {"MHT-P8001", "Printer001"};
 
     private ProgressDialog progress;
+
     private ListView listView;
     private ImageView refresh_animation;
     private TextView refresh;
+
     private ConstraintLayout deviceListView;
     private ConstraintLayout connectedView;
 
@@ -45,73 +48,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         init();
-
-        serviceConnection = new ServiceConnection() {
-            @Override
-            public void onServiceConnected(ComponentName name, IBinder binder) {
-                service = ((PrinterService.ServiceBinder)binder).getService();
-                isBounded = true;
-                fetch();
-            }
-            @Override
-            public void onServiceDisconnected(ComponentName name) {
-                isBounded = false;
-            }
-        };
-
-        serviceIntent = new Intent(this, PrinterService.class);
         initService();
-    }
-
-    private void initService() {
-        if(serviceStopped(PrinterService.class.getName())) {
-            startService(serviceIntent);
-        }
-        if (!isBounded) {
-            bindService(serviceIntent, serviceConnection, BIND_AUTO_CREATE);
-        }
-    }
-
-    private void fetch() {
-        turnOnBluetooth();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 1 && resultCode == RESULT_OK) {
-            activityForResult = false;
-            initializeBluetooth();
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (!activityForResult) {
-            unbindService(serviceConnection);
-            finish();
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        initService();
-        super.onResume();
-    }
-
-    public boolean serviceStopped(String serviceName) {
-        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        for (ActivityManager.RunningServiceInfo info : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (serviceName.equals(info.service.getClassName())) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private void init() {
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_connect);
         progress = new ProgressDialog(this);
         listView = findViewById(R.id.listView);
         refresh_animation = findViewById(R.id.refresh_image);
@@ -130,7 +71,53 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        printSample.setOnClickListener(v -> printSample() );
+        printSample.setOnClickListener(v -> sampleWebInvoice() );
+
+        serviceConnection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder binder) {
+                service = ((PrinterService.ServiceBinder)binder).getService();
+                isBounded = true;
+                turnOnBluetooth();
+            }
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                isBounded = false;
+            }
+        };
+
+        serviceIntent = new Intent(this, PrinterService.class);
+    }
+
+    private void initService() {
+        if(serviceStopped(PrinterService.class.getName())) {
+            startService(serviceIntent);
+            bindService(serviceIntent, serviceConnection, BIND_IMPORTANT);
+        } else {
+            if (!isBounded) {
+                bindService(serviceIntent, serviceConnection, BIND_IMPORTANT);
+            } else {
+                setView(service.isConnected());
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1 && resultCode == RESULT_OK) {
+            initializeBluetooth();
+        }
+    }
+
+    public boolean serviceStopped(String serviceName) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo info : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceName.equals(info.service.getClassName())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void setView(boolean connected) {
@@ -150,7 +137,6 @@ public class MainActivity extends AppCompatActivity {
         if(BluetoothAdapter.getDefaultAdapter() == null) {
             Toast.makeText(this, "This device doesn't support Bluetooth!", Toast.LENGTH_SHORT).show();
         } else if(!BluetoothAdapter.getDefaultAdapter().isEnabled()) {
-            activityForResult = true;
             startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE), 1);
         } else {
             initializeBluetooth();
@@ -168,7 +154,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void connecting(String msg) {
-                progress = new ProgressDialog(MainActivity.this);
+                progress = new ProgressDialog(ConnectActivity.this);
                 progress.setTitle("Connecting...");
                 progress.setMessage("please wait");
                 progress.setCancelable(false);
@@ -196,23 +182,22 @@ public class MainActivity extends AppCompatActivity {
             TextView address = view.findViewById(R.id.deviceAddress);
             title.setText(list.get(position).getName());
             address.setText(list.get(position).getAddress());
-            view.setOnClickListener(v -> service.connect(list.get(position)) );
+            view.setOnClickListener(v -> {
+                AlertDialog.Builder builder = new AlertDialog.Builder(ConnectActivity.this);
+                builder.setTitle("Printer model")
+                        .setItems(models, (dialog, which) -> service.connect(list.get(position), which))
+                        .setCancelable(false).show();
+            });
             return view;
         });
         listView.setAdapter(service.getDefaultAdapter());
         setView(service.isConnected());
     }
 
-    private void printSample() {
-        String sample = "<CENTER><LARGE>Title<BR>\n"+
-                "<CENTER><MEDIUM>Subtitle<BR>\n"+
-                "<NORMAL><LEFT>Left<BR>\n"+
-                "<RIGHT>Right<BR>";
-        if (service != null) {
-            if (!service.printInvoice(sample)) {
-                Toast.makeText(this, "Sample isn't printed", Toast.LENGTH_SHORT).show();
-            }
-        }
+    private void sampleWebInvoice() {
+        Intent intent = new Intent(this, WebViewActivity.class);
+        intent.putExtra("url", "file:///android_asset/index.html");
+        startActivity(intent);
     }
 
     @SuppressLint("SetTextI18n")

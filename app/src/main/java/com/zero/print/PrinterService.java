@@ -17,9 +17,11 @@ import java.io.IOException;
 public class PrinterService extends Service {
 
     public static final String PRINTER = "com.zero.print";
+    public static final String MODEL = "com.zero.print.model";
     public BluetoothModuleControl bluetoothDriver;
     public SharedPreferences sharedPreferences;
     public String defaultPrinter;
+    private boolean model_mht = false;
 
     public Status status;
 
@@ -44,8 +46,9 @@ public class PrinterService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         printMsg("StartCommand");
         sharedPreferences = getSharedPreferences(PRINTER, MODE_MULTI_PROCESS);
-        if (sharedPreferences.contains(PRINTER)) {
+        if (sharedPreferences.contains(PRINTER) && sharedPreferences.contains(MODEL)) {
             defaultPrinter = sharedPreferences.getString(PRINTER, "");
+            model_mht = sharedPreferences.getBoolean(MODEL, false);
         }
         return Service.START_STICKY;
     }
@@ -81,15 +84,16 @@ public class PrinterService extends Service {
         if (defaultPrinter != null && !defaultPrinter.isEmpty()) {
             for (BluetoothDevice device : bluetoothDriver.deviceList) {
                 if (device.getAddress().equals(defaultPrinter)) {
-                    connect(device);
+                    connect(device, model_mht?0:1);
                     break;
                 }
             }
         }
     }
 
-    public void connect(BluetoothDevice device) {
+    public void connect(BluetoothDevice device, int which) {
         sharedPreferences.edit().putString(PRINTER, device.getAddress()).apply();
+        sharedPreferences.edit().putBoolean(MODEL, which==0).apply();
         if (status != null) status.connecting(device.getName());
         new Thread() {
             @Override
@@ -97,27 +101,24 @@ public class PrinterService extends Service {
                 bluetoothDriver.connection.connect(device);
             }
         }.start();
+        model_mht = which == 0;
     }
 
-    public boolean printInvoice(String invoice) {
+    public void printInvoice(String invoice) {
         ByteArrayOutputStream invoice_byte;
         try {
             invoice_byte = parseStringInvoice(invoice);
-            if (MainActivity.DEBUG) {
+            if (ConnectActivity.DEBUG) {
                 printMsg("Invoice length: "+invoice_byte.size());
-                return true;
             } else {
                 if (bluetoothDriver.connection.isConnected()) {
                     bluetoothDriver.data.send(invoice_byte.toByteArray());
-                    return true;
                 } else {
                     Toast.makeText(getApplicationContext(), "Printer isn't connected!", Toast.LENGTH_SHORT).show();
-                    return false;
                 }
             }
         } catch (IOException e) {
             Toast.makeText(getApplicationContext(), "Exception on invoice parsing!", Toast.LENGTH_SHORT).show();
-            return false;
         }
     }
 
@@ -125,6 +126,7 @@ public class PrinterService extends Service {
         switch (what) {
             case BluetoothModuleControl.HANDLE_CONNECTION_ERROR:
                 sharedPreferences.edit().remove(PRINTER).apply();
+                sharedPreferences.edit().remove(MODEL).apply();
                 if (status != null) status.connection_error(msg);
                 break;
             case BluetoothModuleControl.HANDLE_CONNECTION_SUCCESS:
@@ -139,17 +141,24 @@ public class PrinterService extends Service {
     }
 
     private void printMsg(String msg) {
-        if (MainActivity.DEBUG) {
+        if (ConnectActivity.DEBUG) {
             Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
         }
     }
+
     private ByteArrayOutputStream parseStringInvoice(String invoice) throws IOException {
+        Toast.makeText(this, invoice, Toast.LENGTH_SHORT).show();
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
         byteStream.write(Printer.INIT);
+
+        String font = "NORMAL";
+        boolean dualAlign = false;
+        int bufferLength = 0;
+
         boolean inCommand = false;
         StringBuilder command = null;
-        char[] chArray = invoice.toCharArray();
-        for (char ch : chArray) {
+        for (int i = 0; i < invoice.length(); i++) {
+            char ch = invoice.charAt(i);
             if (ch == '<') {
                 inCommand = true;
                 command = new StringBuilder();
@@ -159,24 +168,58 @@ public class PrinterService extends Service {
                 String s = command.toString();
                 switch (s) {
                     case "LEFT":
+                        dualAlign = true;
                         byteStream.write(Printer.ALIGN_LEFT);
                         break;
                     case "CENTER":
                         byteStream.write(Printer.ALIGN_CENTER);
                         break;
                     case "RIGHT":
+                        if (dualAlign) {
+                            int length = 0;
+                            switch (font) {
+                                case "NORMAL":
+                                    length = (model_mht?57:64)-bufferLength;
+                                    break;
+                                case "MEDIUM":
+                                    length = 48-bufferLength;
+                                    break;
+                                case "LARGE":
+                                    length = 24-bufferLength;
+                            }
+                            StringBuilder tmpBuffer = new StringBuilder();
+                            char sch = invoice.charAt(i+1);
+                            while (sch != '<' && sch != '\n') {
+                                tmpBuffer.append(sch);
+                                length--;
+                                i++;
+                                sch = invoice.charAt(i+1);
+                            }
+                            StringBuilder subBuffer = new StringBuilder();
+                            while (length != 0) {
+                                subBuffer.append(' ');
+                                length--;
+                            }
+                            subBuffer.append(tmpBuffer);
+                            byteStream.write(subBuffer.toString().getBytes());
+                        }
                         byteStream.write(Printer.ALIGN_RIGHT);
                         break;
                     case "NORMAL":
+                        font = "NORMAL";
                         byteStream.write(Printer.SIZE_NORMAL);
                         break;
                     case "MEDIUM":
+                        font = "MEDIUM";
                         byteStream.write(Printer.SIZE_MEDIUM);
                         break;
                     case "LARGE":
+                        font = "LARGE";
                         byteStream.write(Printer.SIZE_LARGE);
                         break;
                     case "BR":
+                        dualAlign = false;
+                        bufferLength = 0;
                         byteStream.write(Printer.PAPER_FEED);
                         break;
                     default:
@@ -185,6 +228,7 @@ public class PrinterService extends Service {
             } else if(inCommand) {
                 command.append(ch);
             } else if (ch != '\n') {
+                bufferLength++;
                 byteStream.write(ch);
             }
         }
@@ -193,6 +237,7 @@ public class PrinterService extends Service {
     }
 
     public boolean isConnected() {
+        if (ConnectActivity.DEBUG) return true;
         return bluetoothDriver.connection.isConnected();
     }
 

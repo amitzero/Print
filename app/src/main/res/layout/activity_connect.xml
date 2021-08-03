@@ -5,15 +5,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black"
-    tools:context=".MainActivity">
+    tools:context=".ConnectActivity">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/device_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:visibility="visible"
-        app:layout_constraintBottom_toTopOf="@+id/connected_view"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/connected_view">
 
         <ListView
             android:id="@+id/listView"
@@ -55,8 +55,8 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/device_view">
+        app:layout_constraintTop_toBottomOf="@+id/device_view"
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <TextView
             android:id="@+id/connected"
@@ -110,7 +110,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/print_sample"
+            android:text="@string/sample_webpage"
             android:textColor="@color/white"
             android:textSize="18sp"
             app:layout_constraintLeft_toLeftOf="parent"
